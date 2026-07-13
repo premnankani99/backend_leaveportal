@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_1 = require("../controllers/admin");
+const auth_1 = require("../middleware/auth");
+const rbac_1 = require("../middleware/rbac");
+const router = (0, express_1.Router)();
+router.use(auth_1.verifyToken);
+router.get('/pending', (0, rbac_1.hasPermission)('employees:read'), admin_1.getPendingVerifications);
+router.get('/verified', (0, rbac_1.hasPermission)('employees:read'), admin_1.getVerifiedEmployees);
+router.patch('/verification/:id', (0, rbac_1.hasPermission)('employees:write'), admin_1.updateVerificationStatus);
+router.delete('/employee/:id', (0, rbac_1.hasPermission)('employees:write'), admin_1.deleteEmployee);
+router.put('/employee/:id', (0, rbac_1.hasPermission)('employees:write'), admin_1.updateEmployee);
+router.post('/comp-off/grant', (0, rbac_1.hasPermission)('employees:write'), admin_1.grantCompOff);
+router.get('/comp-off/history', (0, rbac_1.hasPermission)('employees:read'), admin_1.getCompOffHistory);
+exports.default = router;
