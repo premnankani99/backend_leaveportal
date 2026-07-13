@@ -216,9 +216,13 @@ export const login = async (_req: Request, res: Response): Promise<void> => {
 
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.LOGIN_SUCCESS, token, user });
-    } catch (_error) {
+    } catch (_error: any) {
         console.error("Login Error:", _error);
-        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.SERVER_ERROR });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+            error: MESSAGES.SERVER_ERROR,
+            message: _error.message,
+            stack: _error.stack
+        });
     }
 };
 
