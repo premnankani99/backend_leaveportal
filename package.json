@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "lint": "eslint . --ext .js,.ts",
     "lint:fix": "eslint . --ext .js,.ts --fix",
-    "prepare": "husky install",
+    "prepare": "node -e \"try { require('husky'); require('child_process').execSync('husky install', { stdio: 'inherit' }) } catch (e) {}\"",
     "update-docs-commit": "node scripts/update-docs-commit.js"
   },
   "lint-staged": {

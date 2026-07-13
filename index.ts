@@ -14,7 +14,7 @@ app.use(express.json());
 import { HTTP_STATUS } from './constants/httpCodes';
 
 // Test API Route
-app.get('/', (_req: Request, res: Response) => {
+app.get(['/', '/api', '/api/'], (_req: Request, res: Response) => {
     res.send("Backend API is running in TypeScript!");
 });
 
