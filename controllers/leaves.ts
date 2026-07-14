@@ -84,10 +84,11 @@ export const getAllLeaves = async (_req: AuthRequest, res: Response): Promise<vo
  */
 export const updateLeaveStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const updatedLeave = await LeaveService.processLeaveActionService(String(req.params.id), req.body.status, req.body.adminNote);
+        const updatedLeave = await LeaveService.processLeaveActionService(String(req.params.id), req.body.status, req.body.adminNote, req.user);
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.LEAVE_STATUS_UPDATED, leave: updatedLeave });
     } catch (_error: any) {
-        if (_error.message === "LEAVE_NOT_FOUND") res.status(HTTP_STATUS.NOT_FOUND).json({ error: MESSAGES.LEAVE_NOT_FOUND });
+        if (_error.message === "UNAUTHORIZED_MANAGER") res.status(HTTP_STATUS.FORBIDDEN).json({ error: "You are not authorized to approve/reject leaves for this employee's department." });
+        else if (_error.message === "LEAVE_NOT_FOUND") res.status(HTTP_STATUS.NOT_FOUND).json({ error: MESSAGES.LEAVE_NOT_FOUND });
         else res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.UPDATE_ERROR });
     }
 };
@@ -143,9 +144,15 @@ export const getLeavesByEmployee = async (req: AuthRequest, res: Response): Prom
 export const requestCompOff = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!req.user?.id) throw new Error("No user ID");
-        const compOff = await CompOffService.requestCompOffService(req.user.id, req.body.total_days, req.body.reason);
+        const { total_days, reason, workedDates } = req.body;
+        if (!workedDates || !Array.isArray(workedDates)) {
+            res.status(400).json({ error: "Worked dates array is required for Comp-Off" });
+            return;
+        }
+        const compOff = await CompOffService.requestCompOffService(req.user.id, total_days, reason, workedDates);
         res.status(HTTP_STATUS.CREATED).json({ message: "Comp-off requested successfully", compOff });
-    } catch (_error) {
+    } catch (error) {
+        console.error("Error in requestCompOff:", error);
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: "Failed to request comp-off" });
     }
 };

@@ -1,10 +1,11 @@
 import prisma from '../prismaClient';
 
-export const requestCompOffService = async (employee_id: string, total_days: number, reason: string) => {
+export const requestCompOffService = async (employee_id: string, total_days: number, reason: string, workedDates: string[]) => {
     return await prisma.compOffGrant.create({
         data: {
             employeeId: employee_id,
             grantedAt: new Date(),
+            workedDates: workedDates,
             daysGranted: total_days,
             reason: reason,
             status: 'pending'

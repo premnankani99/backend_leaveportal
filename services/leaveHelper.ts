@@ -1,5 +1,5 @@
 import prisma from '../prismaClient';
-import { sendEmail } from '../utils/emailService';
+import { sendEmail, MAIN_ADMIN_EMAILS } from '../utils/emailService';
 import { 
     leaveAppliedAdminTemplate, 
     leaveAppliedEmployeeTemplate, 
@@ -91,44 +91,76 @@ export const computeWithdrawalUpdateData = (leave: any, status: string): any => 
 export const sendLeaveEmails = async (profile: any, totalDays: number, start: Date, end: Date, reason: string): Promise<void> => {
     const durationText = totalDays === 1 ? '1 day' : `${totalDays} days`;
     if (profile.email) {
-        await sendEmail({
+        sendEmail({
             to: profile.email, subject: 'Leave Application Submitted', text: `Your leave for ${durationText} is submitted.`,
             html: leaveAppliedEmployeeTemplate(profile.full_name, durationText, start.toDateString(), end.toDateString(), reason)
-        });
+        }).catch(err => console.error("Failed to send email to employee:", err));
     }
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
-        await sendEmail({
-            to: adminEmail, subject: 'New Leave Request', text: `Employee ${profile.full_name} applied for ${durationText} of leave.`,
+    let targetEmails: string[] = [];
+    if (profile.managers && profile.managers.length > 0) {
+        targetEmails = profile.managers.map((m: any) => m.email).filter(Boolean);
+    }
+    
+    if (targetEmails.length === 0) {
+        targetEmails = MAIN_ADMIN_EMAILS;
+    }
+
+    if (targetEmails.length > 0) {
+        sendEmail({
+            to: targetEmails, subject: 'New Leave Request', text: `Employee ${profile.full_name} applied for ${durationText} of leave.`,
             html: leaveAppliedAdminTemplate(profile.full_name, durationText, start.toDateString(), end.toDateString(), reason)
-        });
+        }).catch(err => console.error("Failed to send email to admin/managers:", err));
     }
 };
 
 export const sendStatusEmail = async (leave: any, status: string, adminNote: string): Promise<void> => {
     if (leave.employee?.email) {
-        await sendEmail({
+        sendEmail({
             to: leave.employee.email, subject: `Leave Request ${status.toUpperCase()}`, text: `Your leave has been ${status}.`,
             html: leaveStatusUpdateTemplate(leave.employee.full_name, leave.start_date.toDateString(), leave.end_date.toDateString(), status, adminNote || '')
-        });
+        }).catch(err => console.error("Failed to send status email:", err));
     }
 };
 
 export const handlePendingOrApprovedWithdrawal = (leave: any, datesToWithdraw: any): { message: string, updateData: any } => {
     let updateData: any = {};
     let message = "";
-    if (datesToWithdraw && Array.isArray(datesToWithdraw) && datesToWithdraw.length > 0) updateData.withdrawn_dates = datesToWithdraw;
+    
+    // Parse existing withdrawn dates
+    let existingWithdrawn: string[] = [];
+    if (leave.withdrawn_dates) {
+        if (typeof leave.withdrawn_dates === 'string') {
+            try { existingWithdrawn = JSON.parse(leave.withdrawn_dates); } catch(e){}
+        } else if (Array.isArray(leave.withdrawn_dates)) {
+            existingWithdrawn = leave.withdrawn_dates;
+        }
+    }
+    
+    let newWithdrawnCount = 0;
+    if (datesToWithdraw && Array.isArray(datesToWithdraw) && datesToWithdraw.length > 0) {
+        const newlyAdded = datesToWithdraw.filter((d: string) => !existingWithdrawn.includes(d));
+        newWithdrawnCount = newlyAdded.length;
+        if (newWithdrawnCount > 0) {
+            updateData.withdrawn_dates = Array.from(new Set([...existingWithdrawn, ...datesToWithdraw]));
+        } else {
+            updateData.withdrawn_dates = existingWithdrawn;
+        }
+    }
+
     if (leave.status === 'pending') {
-        if (updateData.withdrawn_dates) {
-            if (updateData.withdrawn_dates.length >= leave.total_days) {
+        if (datesToWithdraw && Array.isArray(datesToWithdraw) && datesToWithdraw.length > 0) {
+            if (newWithdrawnCount >= leave.total_days) {
                 updateData.status = 'cancelled';
                 updateData.withdrawn_at = new Date();
                 updateData.withdrawn_dates = null;
                 message = MESSAGES.LEAVE_CANCELLED;
+            } else if (newWithdrawnCount > 0) {
+                updateData.status = 'pending';
+                updateData.total_days = Math.max(0, leave.total_days - newWithdrawnCount);
+                message = "Partial leave withdrawn instantly as it was still pending.";
             } else {
                 updateData.status = 'pending';
-                updateData.total_days = Math.max(0, leave.total_days - updateData.withdrawn_dates.length);
-                message = "Partial leave withdrawn instantly as it was still pending.";
+                message = "No new dates were withdrawn.";
             }
         } else {
             updateData.status = 'cancelled';
@@ -144,11 +176,19 @@ export const handlePendingOrApprovedWithdrawal = (leave: any, datesToWithdraw: a
 };
 
 export const sendWithdrawalEmail = async (employee: any, start: Date, end: Date, message: string): Promise<void> => {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail && employee) {
-        await sendEmail({
-            to: adminEmail, subject: 'Leave Withdrawal Request', text: `Withdrawal request from ${employee.full_name}`,
+    let targetEmails: string[] = [];
+    if (employee && employee.managers && employee.managers.length > 0) {
+        targetEmails = employee.managers.map((m: any) => m.email).filter(Boolean);
+    }
+    
+    if (targetEmails.length === 0) {
+        targetEmails = MAIN_ADMIN_EMAILS;
+    }
+
+    if (targetEmails.length > 0 && employee) {
+        sendEmail({
+            to: targetEmails, subject: 'Leave Withdrawal Request', text: `Withdrawal request from ${employee.full_name}`,
             html: leaveWithdrawalAdminTemplate(employee.full_name, start.toDateString(), end.toDateString(), message)
-        });
+        }).catch(err => console.error("Failed to send withdrawal email:", err));
     }
 };

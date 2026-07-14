@@ -13,7 +13,10 @@ import {
 
 export const applyNewLeaveService = async (employee_id: string, leave_type: string, start_date: Date, end_date: Date, reason: string, is_half_day: boolean, isApproved: boolean = false) => {
     const total_days = is_half_day ? 0.5 : await calculateTotalDays(start_date, end_date);
-    const profile = await prisma.profiles.findUnique({ where: { id: employee_id } });
+    const profile = await prisma.profiles.findUnique({ 
+        where: { id: employee_id },
+        include: { managers: { select: { email: true, full_name: true } } }
+    });
     if (!profile) throw new Error("EMPLOYEE_NOT_FOUND");
 
     const joinedDate = profile.date_of_joining ? new Date(profile.date_of_joining) : new Date(profile.created_at);
@@ -52,14 +55,21 @@ export const fetchEmployeeLeavesService = async (employee_id: string) => {
 
 export const fetchAllLeavesService = async () => {
     return await prisma.leave_requests.findMany({
-        include: { employee: true },
+        include: { employee: { include: { managers: { select: { id: true } } } } },
         orderBy: { created_at: 'desc' }
     });
 };
 
-export const processLeaveActionService = async (id: string, status: string, adminNote: string) => {
-    const leave = await prisma.leave_requests.findUnique({ where: { id } });
-    if (!leave) throw new Error("LEAVE_NOT_FOUND");
+export const processLeaveActionService = async (id: string, status: string, adminNote: string, user?: any) => {
+    const leave = await prisma.leave_requests.findUnique({ 
+        where: { id }, 
+        include: { employee: { include: { managers: { select: { id: true } } } } } 
+    });
+    if (!leave) throw new Error("Leave request not found");
+
+    if (user && user.role === 'admin' && !leave.employee.managers.some(m => m.id === user.id)) {
+        throw new Error("UNAUTHORIZED_MANAGER");
+    }
 
     const updateData = computeWithdrawalUpdateData(leave, status);
     if (adminNote) updateData.admin_note = adminNote;
@@ -101,7 +111,7 @@ export const withdrawLeaveService = async (id: string, datesToWithdraw: any) => 
     const { message, updateData } = handlePendingOrApprovedWithdrawal(leave, datesToWithdraw);
 
     const updatedLeave = await prisma.leave_requests.update({ 
-        where: { id }, data: updateData, include: { employee: true } 
+        where: { id }, data: updateData, include: { employee: { include: { managers: { select: { email: true, full_name: true } } } } } 
     });
 
     let refundDays = 0;

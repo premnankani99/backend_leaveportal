@@ -24,6 +24,8 @@ model profiles {
   role                String             @default("employee")
   department_id       String?
   department          departments?       @relation(fields: [department_id], references: [id])
+  managers            profiles[]         @relation("EmployeeManagers")
+  subordinates        profiles[]         @relation("EmployeeManagers")
   designation         String?
   employee_code       String?            @unique
   date_of_joining     DateTime?
@@ -96,6 +98,7 @@ model CompOffGrant {
   reason       String
   grantedBy    String?
   grantedAt    DateTime @default(now())
+  workedDates  Json?
   status       String   @default("approved") // "pending", "approved", "rejected"
   adminNote    String?  @db.Text
 }

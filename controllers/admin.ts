@@ -41,9 +41,33 @@ export const getVerifiedEmployees = async (_req: Request, res: Response): Promis
                 role: 'employee',
                 is_deleted: false 
             },
+            include: {
+                managers: {
+                    select: { id: true, full_name: true, email: true, role: true }
+                }
+            },
             orderBy: { full_name: 'asc' }
         });
         res.status(HTTP_STATUS.OK).json(verified);
+    } catch (_error) {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
+    }
+};
+
+/**
+ * Fetches all managers (admins and HR) to be assigned as parents.
+ */
+export const getManagers = async (_req: Request, res: Response): Promise<void> => {
+    try {
+        const managers = await prisma.profiles.findMany({
+            where: { 
+                verification_status: 'approved', 
+                role: { in: ['admin', 'hr'] },
+                is_deleted: false 
+            },
+            orderBy: { full_name: 'asc' }
+        });
+        res.status(HTTP_STATUS.OK).json(managers);
     } catch (_error) {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
     }
@@ -104,9 +128,18 @@ export const deleteEmployee = async (req: Request, res: Response): Promise<void>
 export const updateEmployee = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const { full_name, email, phone, designation, role, date_of_joining } = req.body;
+        const { full_name, email, phone, designation, role, date_of_joining, toggle_manager } = req.body;
 
         const updateData: any = { full_name, email, phone, designation, role };
+        
+        // Only allow admins to assign/unassign themselves
+        if (toggle_manager !== undefined && (req as any).user?.role === 'admin') {
+            const adminId = (req as any).user.id;
+            updateData.managers = toggle_manager 
+                ? { connect: { id: adminId } } 
+                : { disconnect: { id: adminId } };
+        }
+        
         if (date_of_joining) {
             updateData.date_of_joining = new Date(date_of_joining);
         }
@@ -124,10 +157,11 @@ export const updateEmployee = async (req: Request, res: Response): Promise<void>
 
 export const grantCompOff = async (req: any, res: Response): Promise<void> => {
   try {
-    const { employeeId, daysGranted, reason } = req.body;
+    console.log("GRANT COMP OFF REQ.BODY:", req.body);
+    const { employeeId, daysGranted, reason, workedDates } = req.body;
     
-    if (!employeeId || !daysGranted || !reason) {
-      res.status(400).json({ error: "Missing required fields" });
+    if (!employeeId || !daysGranted || !reason || !workedDates || !Array.isArray(workedDates)) {
+      res.status(400).json({ error: "Missing required fields (employeeId, daysGranted, reason, workedDates as array)" });
       return;
     }
 
@@ -157,6 +191,7 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
           employeeId,
           daysGranted,
           reason,
+          workedDates,
           grantedBy: adminId
         }
       });
@@ -184,6 +219,7 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
           <p style="font-size: 16px; line-height: 1.5;">An Admin has granted you <strong style="color: #4ade80;">${daysGranted} day(s)</strong> of Comp-Off.</p>
           <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 15px 0;">
             <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Reason:</strong> ${reason}</p>
+            <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Worked Dates:</strong> ${workedDates.map((d: string) => new Date(d).toDateString()).join(', ')}</p>
             <p style="margin: 0; font-size: 14px;"><strong>Your New Leave Balance:</strong> ${finalProfile.available_leaves} Days</p>
           </div>
           <p style="font-size: 14px; color: #64748b;">You can use this balance to apply for future Paid leaves.</p>
@@ -191,7 +227,7 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
           <p style="font-size: 14px; color: #64748b; margin-bottom: 0;">Thanks,<br/>Admin Team</p>
         </div>
       `;
-      await sendEmail({
+      sendEmail({
         to: finalProfile.email,
         subject: 'Comp-Off Granted',
         text: `You have been granted ${daysGranted} day(s) of Comp-Off for reason: ${reason}. Your new balance is ${finalProfile.available_leaves}.`,

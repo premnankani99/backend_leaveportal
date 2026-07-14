@@ -5,6 +5,8 @@ import authRoutes from './routes/auth';
 import leaveRoutes from './routes/leaves';
 import adminRoutes from './routes/admin';
 import holidaysRoutes from './routes/holidays';
+import { initCronJobs } from './cron/leaveAccrual';
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -47,4 +49,5 @@ app.use('/api/holidays', holidaysRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
+    initCronJobs();
 });
