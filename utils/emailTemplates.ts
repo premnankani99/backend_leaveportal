@@ -22,7 +22,11 @@ export const leaveAppliedAdminTemplate = (employeeName: string, durationText: st
         </tr>
     </table>
     <br/>
-    <p>Please log in to the Leave Portal to review this request.</p>
+    <p>Please click below to take action on this request:</p>
+    <div style="margin: 20px 0;">
+        <a href="https://lp.landmaarkdeveloper.com/admin/leave-queue" style="display: inline-block; padding: 10px 20px; margin-right: 10px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Approve Request</a>
+        <a href="https://lp.landmaarkdeveloper.com/admin/leave-queue" style="display: inline-block; padding: 10px 20px; background-color: #e74c3c; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Reject Request</a>
+    </div>
     <br/>
     <p style="font-size: 12px; color: #888;">This is an automated message. Please do not reply.</p>
 </div>
@@ -53,6 +57,7 @@ export const leaveAppliedEmployeeTemplate = (employeeName: string, durationText:
     </table>
     <br/>
     <p>We will notify you once a decision has been made.</p>
+    <p><a href="https://lp.landmaarkdeveloper.com" style="display: inline-block; padding: 8px 15px; margin-top: 10px; background-color: #7e57c2; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Leave Portal</a></p>
     <br/>
     <p style="font-size: 12px; color: #888;">This is an automated message. Please do not reply.</p>
 </div>
@@ -71,6 +76,7 @@ export const leaveStatusUpdateTemplate = (employeeName: string, startDate: strin
         </div>
         <br/>
         <p>Log in to the Leave Portal for more details.</p>
+        <p><a href="https://lp.landmaarkdeveloper.com" style="display: inline-block; padding: 8px 15px; margin-top: 10px; background-color: #7e57c2; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Leave Portal</a></p>
         <br/>
         <p style="font-size: 12px; color: #888;">This is an automated message. Please do not reply.</p>
     </div>
@@ -87,6 +93,7 @@ export const getOtpEmailTemplate = (fullName: string, otp: string) => {
         ${otp}
       </div>
       <p>If you did not create an account, you can safely ignore this email.</p>
+      <p style="text-align: center; margin-top: 20px;"><a href="https://lp.landmaarkdeveloper.com" style="color: #7e57c2; text-decoration: none; font-weight: bold;">Visit Leave Portal</a></p>
       <hr style="border: none; border-top: 1px solid #eaeaea; margin: 20px 0;" />
       <p style="font-size: 12px; color: #888; text-align: center;">This is an automated message, please do not reply.</p>
     </div>
@@ -103,6 +110,7 @@ export const getResetPasswordEmailTemplate = (fullName: string, otp: string) => 
         ${otp}
       </div>
       <p>If you did not request a password reset, you can safely ignore this email.</p>
+      <p style="text-align: center; margin-top: 20px;"><a href="https://lp.landmaarkdeveloper.com" style="color: #7e57c2; text-decoration: none; font-weight: bold;">Visit Leave Portal</a></p>
       <hr style="border: none; border-top: 1px solid #eaeaea; margin: 20px 0;" />
       <p style="font-size: 12px; color: #888; text-align: center;">This is an automated message, please do not reply.</p>
     </div>
@@ -130,6 +138,7 @@ export const leaveWithdrawalAdminTemplate = (employeeName: string, startDate: st
     </div>
     <br/>
     <p>Please log in to the Leave Portal to review and approve the withdrawal.</p>
+    <p><a href="https://lp.landmaarkdeveloper.com/admin/leave-queue" style="display: inline-block; padding: 8px 15px; margin-top: 10px; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Leave Queue</a></p>
     <br/>
     <p style="font-size: 12px; color: #888;">This is an automated message. Please do not reply.</p>
 </div>
