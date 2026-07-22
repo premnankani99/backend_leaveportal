@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Request, Response } from 'express';
 import { sendEmail } from '../utils/emailService';
 import { getAllLeaves } from './leaves';
@@ -23,6 +24,7 @@ export const getPendingVerifications = async (_req: Request, res: Response): Pro
         });
         res.status(HTTP_STATUS.OK).json(pending);
     } catch (_error) {
+        logger.error("[Backend] Error caught in admin.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
     }
 };
@@ -50,6 +52,7 @@ export const getVerifiedEmployees = async (_req: Request, res: Response): Promis
         });
         res.status(HTTP_STATUS.OK).json(verified);
     } catch (_error) {
+        logger.error("[Backend] Error caught in admin.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
     }
 };
@@ -69,6 +72,7 @@ export const getManagers = async (_req: Request, res: Response): Promise<void> =
         });
         res.status(HTTP_STATUS.OK).json(managers);
     } catch (_error) {
+        logger.error("[Backend] Error caught in admin.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
     }
 };
@@ -85,7 +89,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
         const { status } = req.body; 
 
         const updatedProfile = await prisma.profiles.update({
-            where: { id: String(id) },
+            where: { id: Number(id) },
             data: { 
                 verification_status: status,
                 is_active: status === 'approved' 
@@ -94,6 +98,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
 
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.VERIFICATION_UPDATED, profile: updatedProfile });
     } catch (_error) {
+        logger.error("[Backend] Error caught in admin.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.UPDATE_ERROR });
     }
 };
@@ -109,12 +114,13 @@ export const deleteEmployee = async (req: Request, res: Response): Promise<void>
         const { id } = req.params;
 
         await prisma.profiles.update({
-            where: { id: String(id) },
+            where: { id: Number(id) },
             data: { is_deleted: true }
         });
 
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.EMPLOYEE_DELETED });
     } catch (_error) {
+        logger.error("[Backend] Error caught in admin.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.DELETE_ERROR });
     }
 };
@@ -145,12 +151,13 @@ export const updateEmployee = async (req: Request, res: Response): Promise<void>
         }
 
         const updatedProfile = await prisma.profiles.update({
-            where: { id: String(id) },
+            where: { id: Number(id) },
             data: updateData
         });
 
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.EMPLOYEE_UPDATED, profile: updatedProfile });
     } catch (_error) {
+        logger.error("[Backend] Error caught in admin.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.UPDATE_ERROR });
     }
 };
@@ -192,7 +199,8 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
           daysGranted,
           reason,
           workedDates,
-          grantedBy: adminId
+          grantedBy: adminId,
+          status: 'approved'
         }
       });
 
@@ -240,6 +248,7 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
       newBalance: finalProfile.available_leaves
     });
   } catch (error) {
+        logger.error("[Backend] Error caught in admin.ts");
     console.error("Error granting comp off:", error);
     res.status(500).json({ error: "Failed to grant comp off" });
   }
@@ -248,6 +257,7 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
 export const getCompOffHistory = async (req: Request, res: Response): Promise<void> => {
   try {
     const history = await prisma.compOffGrant.findMany({
+      where: { employee: { is_deleted: false } },
       include: {
         employee: {
           select: {
@@ -263,6 +273,7 @@ export const getCompOffHistory = async (req: Request, res: Response): Promise<vo
 
     res.json(history);
   } catch (error) {
+        logger.error("[Backend] Error caught in admin.ts");
     console.error("Error fetching comp off history:", error);
     res.status(500).json({ error: "Failed to fetch history" });
   }

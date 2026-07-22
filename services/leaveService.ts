@@ -11,7 +11,7 @@ import {
     extractPaidDays
 } from './leaveHelper';
 
-export const applyNewLeaveService = async (employee_id: string, leave_type: string, start_date: Date, end_date: Date, reason: string, is_half_day: boolean, isApproved: boolean = false) => {
+export const applyNewLeaveService = async (employee_id: number, leave_type: string, start_date: Date, end_date: Date, reason: string, is_half_day: boolean, isApproved: boolean = false) => {
     const total_days = is_half_day ? 0.5 : await calculateTotalDays(start_date, end_date);
     const profile = await prisma.profiles.findUnique({ 
         where: { id: employee_id },
@@ -23,7 +23,7 @@ export const applyNewLeaveService = async (employee_id: string, leave_type: stri
     const inProbation = isInProbation(joinedDate);
     
     // Calculate leave type incorporating current available balance
-    const finalLeaveType = await calculateLeaveType(inProbation, employee_id, total_days, leave_type, start_date, profile.available_leaves);
+    const finalLeaveType = await calculateLeaveType(inProbation, String(employee_id), total_days, leave_type, start_date, profile.available_leaves);
 
     // Calculate how many paid days were actually consumed
     const paidDays = extractPaidDays(finalLeaveType, total_days);
@@ -46,7 +46,7 @@ export const applyNewLeaveService = async (employee_id: string, leave_type: stri
     return newLeave;
 };
 
-export const fetchEmployeeLeavesService = async (employee_id: string) => {
+export const fetchEmployeeLeavesService = async (employee_id: number) => {
     return await prisma.leave_requests.findMany({
         where: { employee_id },
         orderBy: { created_at: 'desc' }
@@ -55,12 +55,13 @@ export const fetchEmployeeLeavesService = async (employee_id: string) => {
 
 export const fetchAllLeavesService = async () => {
     return await prisma.leave_requests.findMany({
+        where: { employee: { is_deleted: false } },
         include: { employee: { include: { managers: { select: { id: true } } } } },
         orderBy: { created_at: 'desc' }
     });
 };
 
-export const processLeaveActionService = async (id: string, status: string, adminNote: string, user?: any) => {
+export const processLeaveActionService = async (id: number, status: string, adminNote: string, user?: any) => {
     const leave = await prisma.leave_requests.findUnique({ 
         where: { id }, 
         include: { employee: { include: { managers: { select: { id: true } } } } } 
@@ -103,7 +104,7 @@ export const processLeaveActionService = async (id: string, status: string, admi
     return updatedLeave;
 };
 
-export const withdrawLeaveService = async (id: string, datesToWithdraw: any) => {
+export const withdrawLeaveService = async (id: number, datesToWithdraw: any) => {
     const leave = await prisma.leave_requests.findUnique({ where: { id } });
     if (!leave) throw new Error("LEAVE_NOT_FOUND");
     if (leave.status !== 'pending' && leave.status !== 'approved') throw new Error("CANNOT_WITHDRAW");
@@ -130,6 +131,8 @@ export const withdrawLeaveService = async (id: string, datesToWithdraw: any) => 
         });
     }
     
-    await sendWithdrawalEmail(updatedLeave.employee, updatedLeave.start_date, updatedLeave.end_date, message);
+    if (leave.status === 'approved') {
+        await sendWithdrawalEmail(updatedLeave.employee, updatedLeave.start_date, updatedLeave.end_date, message);
+    }
     return { message, updatedLeave };
 };

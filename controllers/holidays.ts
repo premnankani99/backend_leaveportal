@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Request, Response } from 'express';
 import prisma from '../prismaClient';
 import { HTTP_STATUS } from '../constants/httpCodes';
@@ -10,6 +11,7 @@ export const getHolidays = async (req: Request, res: Response): Promise<void> =>
         });
         res.status(HTTP_STATUS.OK).json(holidays);
     } catch (error) {
+        logger.error("[Backend] Error caught in holidays.ts");
         console.error("Error fetching holidays:", error);
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
     }
@@ -46,6 +48,7 @@ export const addHoliday = async (req: Request, res: Response): Promise<void> => 
 
         res.status(HTTP_STATUS.CREATED).json(newHoliday);
     } catch (error: any) {
+        logger.error("[Backend] Error caught in holidays.ts");
         console.error("Error adding holiday:", error);
         if (error.code === 'P2002') {
             res.status(HTTP_STATUS.BAD_REQUEST).json({ error: "A holiday on this date already exists." });
@@ -59,10 +62,11 @@ export const deleteHoliday = async (req: Request, res: Response): Promise<void> 
     try {
         const { id } = req.params;
         await prisma.holidays.delete({
-            where: { id: id as string }
+            where: { id: Number(id) }
         });
         res.status(HTTP_STATUS.OK).json({ message: "Holiday deleted successfully" });
     } catch (error: any) {
+        logger.error("[Backend] Error caught in holidays.ts");
         console.error("Error deleting holiday:", error);
         if (error.code === 'P2025') {
             res.status(HTTP_STATUS.NOT_FOUND).json({ error: "Holiday not found" });

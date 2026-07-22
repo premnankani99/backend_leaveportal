@@ -30,6 +30,19 @@ export const MAIN_ADMIN_EMAILS = [
 
 export const MAIN_HR_EMAIL = 'kanjaniprerna1@gmail.com';
 
+export const getAdminAndHrEmails = async (): Promise<string[]> => {
+    try {
+        const users = await prisma.profiles.findMany({
+            where: { role: { in: ['admin', 'hr'] } },
+            select: { email: true }
+        });
+        return users.map(u => u.email).filter(e => !!e) as string[];
+    } catch (e) {
+        console.error("Error fetching admin and HR emails:", e);
+        return [...MAIN_ADMIN_EMAILS, MAIN_HR_EMAIL]; // fallback
+    }
+};
+
 export const sendEmail = async (options: SendEmailOptions): Promise<boolean> => {
     try {
         // Construct the CC array based on existing options
@@ -41,12 +54,8 @@ export const sendEmail = async (options: SendEmailOptions): Promise<boolean> => 
                 ccArray = [options.cc];
             }
         }
-        
-        // Add specific HR email to CC ALWAYS
-        if (!ccArray.includes(MAIN_HR_EMAIL)) {
-            ccArray.push(MAIN_HR_EMAIL);
-        }
 
+        console.log('Sending email. TO:', options.to, 'CC:', ccArray);
         const mailOptions = {
             from: process.env.FROM_EMAIL || '"Leave Portal" <noreply@yourdomain.com>',
             to: options.to,

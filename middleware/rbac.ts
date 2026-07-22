@@ -7,7 +7,8 @@ import { MESSAGES } from '../constants/strings';
 const rolePermissions: Record<string, string[]> = {
   admin: [
     'leaves:read', 
-    'leaves:write', 
+    'leaves:write',
+    'leaves:self',
     'employees:read', 
     'employees:write', 
     'announcements:write',
@@ -15,7 +16,10 @@ const rolePermissions: Record<string, string[]> = {
   ],
   hr: [
     'leaves:read', 
+    'leaves:write',
+    'leaves:self',
     'employees:read',
+    'employees:write',
     'holidays:write'
   ],
   employee: [

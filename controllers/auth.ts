@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -110,6 +111,7 @@ export const register = async (_req: Request, res: Response): Promise<void> => {
             requireOtp: true 
         });
     } catch (_error) {
+        logger.error("[Backend] Error caught in auth.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.SERVER_ERROR });
     }
 };
@@ -154,6 +156,7 @@ export const verifyOtp = async (_req: Request, res: Response): Promise<void> => 
         const token = jwt.sign({ id: updatedUser.id, role: updatedUser.role }, JWT_SECRET, { expiresIn: '7d' });
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.EMAIL_VERIFIED, token, user: updatedUser });
     } catch (_error) {
+        logger.error("[Backend] Error caught in auth.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.SERVER_ERROR });
     }
 };
@@ -217,6 +220,7 @@ export const login = async (_req: Request, res: Response): Promise<void> => {
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.LOGIN_SUCCESS, token, user });
     } catch (_error: any) {
+        logger.error("[Backend] Error caught in auth.ts");
         console.error("Login Error:", _error);
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
             error: MESSAGES.SERVER_ERROR,
@@ -259,6 +263,7 @@ export const forgotPassword = async (_req: Request, res: Response): Promise<void
 
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.FORGOT_PASSWORD_EMAIL_SENT });
     } catch (_error) {
+        logger.error("[Backend] Error caught in auth.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.SERVER_ERROR });
     }
 };
@@ -303,6 +308,7 @@ export const resetPassword = async (_req: Request, res: Response): Promise<void>
 
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.PASSWORD_RESET_SUCCESS });
     } catch (_error) {
+        logger.error("[Backend] Error caught in auth.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.SERVER_ERROR });
     }
 };
@@ -327,6 +333,7 @@ export const me = async (req: Request, res: Response): Promise<void> => {
 
         res.status(HTTP_STATUS.OK).json({ user });
     } catch (_error) {
+        logger.error("[Backend] Error caught in auth.ts");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.SERVER_ERROR });
     }
 };

@@ -16,7 +16,7 @@ export const applyLeave = async (req: AuthRequest, res: Response): Promise<void>
         const { leave_type, start_date, end_date, reason, is_half_day } = req.body;
         if (!req.user?.id) throw new Error("No user ID");
         const newLeave = await LeaveService.applyNewLeaveService(
-            req.user.id, leave_type, new Date(start_date), new Date(end_date), reason, is_half_day, false
+            Number(req.user.id), leave_type, new Date(start_date), new Date(end_date), reason, is_half_day, false
         );
         res.status(HTTP_STATUS.CREATED).json({ message: MESSAGES.LEAVE_APPLIED, leave: newLeave });
     } catch (_error: any) {
@@ -36,7 +36,7 @@ export const applyLeaveOnBehalf = async (req: AuthRequest, res: Response): Promi
         const { employee_id, leave_type, start_date, end_date, reason, is_half_day } = req.body;
         if (!employee_id) throw new Error("No employee ID");
         const newLeave = await LeaveService.applyNewLeaveService(
-            employee_id, leave_type, new Date(start_date), new Date(end_date), reason, is_half_day, true
+            Number(employee_id), leave_type, new Date(start_date), new Date(end_date), reason, is_half_day, true
         );
         res.status(HTTP_STATUS.CREATED).json({ message: MESSAGES.LEAVE_APPLIED, leave: newLeave });
     } catch (_error: any) {
@@ -54,7 +54,7 @@ export const applyLeaveOnBehalf = async (req: AuthRequest, res: Response): Promi
 export const getMyLeaves = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!req.user?.id) throw new Error("No user ID");
-        const leaves = await LeaveService.fetchEmployeeLeavesService(req.user.id);
+        const leaves = await LeaveService.fetchEmployeeLeavesService(Number(req.user.id));
         res.status(HTTP_STATUS.OK).json(leaves);
     } catch (_error) {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
@@ -84,7 +84,7 @@ export const getAllLeaves = async (_req: AuthRequest, res: Response): Promise<vo
  */
 export const updateLeaveStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const updatedLeave = await LeaveService.processLeaveActionService(String(req.params.id), req.body.status, req.body.adminNote, req.user);
+        const updatedLeave = await LeaveService.processLeaveActionService(Number(req.params.id), req.body.status, req.body.adminNote, req.user);
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.LEAVE_STATUS_UPDATED, leave: updatedLeave });
     } catch (_error: any) {
         if (_error.message === "UNAUTHORIZED_MANAGER") res.status(HTTP_STATUS.FORBIDDEN).json({ error: "You are not authorized to approve/reject leaves for this employee's department." });
@@ -101,7 +101,7 @@ export const updateLeaveStatus = async (req: AuthRequest, res: Response): Promis
  */
 export const withdrawLeave = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { message, updatedLeave } = await LeaveService.withdrawLeaveService(String(req.params.id), req.body.datesToWithdraw);
+        const { message, updatedLeave } = await LeaveService.withdrawLeaveService(Number(req.params.id), req.body.datesToWithdraw);
         res.status(HTTP_STATUS.OK).json({ message, leave: updatedLeave });
     } catch (_error: any) {
         if (_error.message === "LEAVE_NOT_FOUND") res.status(HTTP_STATUS.NOT_FOUND).json({ error: MESSAGES.LEAVE_NOT_FOUND });
@@ -128,7 +128,7 @@ export const adjustUnpaidLeave = async (_req: AuthRequest, res: Response): Promi
  */
 export const getLeavesByEmployee = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const leaves = await LeaveService.fetchEmployeeLeavesService(String(req.params.employeeId));
+        const leaves = await LeaveService.fetchEmployeeLeavesService(Number(req.params.employeeId));
         res.status(HTTP_STATUS.OK).json(leaves);
     } catch (_error) {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
@@ -149,7 +149,7 @@ export const requestCompOff = async (req: AuthRequest, res: Response): Promise<v
             res.status(400).json({ error: "Worked dates array is required for Comp-Off" });
             return;
         }
-        const compOff = await CompOffService.requestCompOffService(req.user.id, total_days, reason, workedDates);
+        const compOff = await CompOffService.requestCompOffService(Number(req.user.id), total_days, reason, workedDates);
         res.status(HTTP_STATUS.CREATED).json({ message: "Comp-off requested successfully", compOff });
     } catch (error) {
         console.error("Error in requestCompOff:", error);
@@ -159,13 +159,13 @@ export const requestCompOff = async (req: AuthRequest, res: Response): Promise<v
 
 /**
  * Fetches all pending compensatory off requests.
- * @param {AuthRequest} _req - Request object.
+ * @param {AuthRequest} req - Request object.
  * @param {Response} res - Response object.
  * @returns {Promise<void>}
  */
-export const getPendingCompOffRequests = async (_req: AuthRequest, res: Response): Promise<void> => {
+export const getPendingCompOffRequests = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const requests = await CompOffService.fetchPendingCompOffsService();
+        const requests = await CompOffService.fetchPendingCompOffsService(req.user);
         res.status(HTTP_STATUS.OK).json(requests);
     } catch (_error) {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: "Failed to fetch requests" });
@@ -181,7 +181,7 @@ export const getPendingCompOffRequests = async (_req: AuthRequest, res: Response
 export const actionCompOffRequest = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!req.user?.id) throw new Error("No user ID");
-        await CompOffService.actionCompOffService(String(req.params.id), req.user.id, req.body.status, req.body.adminNote);
+        await CompOffService.actionCompOffService(Number(req.params.id), Number(req.user.id), req.body.status, req.body.adminNote);
         res.status(HTTP_STATUS.OK).json({ message: `Request ${req.body.status} successfully` });
     } catch (_error: any) {
         if (_error.message === "Request not found") res.status(HTTP_STATUS.NOT_FOUND).json({ error: _error.message });
@@ -199,7 +199,7 @@ export const actionCompOffRequest = async (req: AuthRequest, res: Response): Pro
 export const getMyCompOffs = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!req.user?.id) throw new Error("No user ID");
-        const compOffs = await CompOffService.fetchMyCompOffsService(req.user.id);
+        const compOffs = await CompOffService.fetchMyCompOffsService(Number(req.user.id));
         res.status(HTTP_STATUS.OK).json(compOffs);
     } catch (_error) {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: MESSAGES.FETCH_ERROR });
