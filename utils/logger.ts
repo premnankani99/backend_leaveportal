@@ -3,7 +3,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+  winston.format.printf((info: any) => `${info.timestamp} ${info.level}: ${info.message}`)
 );
 
 const transport = new DailyRotateFile({
