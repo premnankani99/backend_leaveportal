@@ -196,30 +196,63 @@ const handleUnverifiedLogin = async (user: any): Promise<void> => {
  */
 export const login = async (_req: Request, res: Response): Promise<void> => {
     try {
+        const email = _req.body.email ? _req.body.email.toLowerCase() : '';
+        console.log(`[${new Date().toISOString()}] [login] Request received with email: ${email}`);
+        logger.info(`[login] Request received with email: ${email}`);
+
         const { password } = _req.body;
-        const email = _req.body.email.toLowerCase();
+        
+        console.log(`[${new Date().toISOString()}] [login] Querying database for user: ${email}`);
+        logger.info(`[login] Querying database for user: ${email}`);
         const user = await prisma.profiles.findUnique({ where: { email } });
 
         if (!user || !user.password) {
+            console.log(`[${new Date().toISOString()}] [login] User not found or no password set for: ${email}`);
+            logger.info(`[login] User not found or no password set for: ${email}`);
             res.status(HTTP_STATUS.NOT_FOUND).json({ error: "Email not registered" });
             return;
         }
 
+        console.log(`[${new Date().toISOString()}] [login] User found, checking email verification for: ${email}`);
+        logger.info(`[login] User found, checking email verification for: ${email}`);
+
         if (!user.email_verified) {
+            console.log(`[${new Date().toISOString()}] [login] Email not verified, handling unverified login for: ${email}`);
+            logger.info(`[login] Email not verified, handling unverified login for: ${email}`);
+            
             await handleUnverifiedLogin(user);
+            
+            console.log(`[${new Date().toISOString()}] [login] OTP sent to unverified user: ${email}`);
+            logger.info(`[login] OTP sent to unverified user: ${email}`);
+            
             res.status(HTTP_STATUS.FORBIDDEN).json({ error: MESSAGES.OTP_SENT, requireOtp: true });
             return;
         }
 
+        console.log(`[${new Date().toISOString()}] [login] Email is verified, comparing passwords for: ${email}`);
+        logger.info(`[login] Email is verified, comparing passwords for: ${email}`);
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log(`[${new Date().toISOString()}] [login] Password mismatch for: ${email}`);
+            logger.info(`[login] Password mismatch for: ${email}`);
             res.status(HTTP_STATUS.BAD_REQUEST).json({ error: MESSAGES.INVALID_CREDENTIALS });
             return;
         }
 
+        console.log(`[${new Date().toISOString()}] [login] Password match, generating JWT for: ${email}`);
+        logger.info(`[login] Password match, generating JWT for: ${email}`);
+
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        
+        console.log(`[${new Date().toISOString()}] [login] JWT generated, login successful for: ${email}`);
+        logger.info(`[login] JWT generated, login successful for: ${email}`);
+        
         res.status(HTTP_STATUS.OK).json({ message: MESSAGES.LOGIN_SUCCESS, token, user });
     } catch (_error: any) {
+        console.log(`[${new Date().toISOString()}] [login] Error encountered: ${_error.message}`);
+        logger.error(`[login] Error encountered: ${_error.message}`);
+        
         logger.error("[Backend] Error caught in auth.ts");
         console.error("Login Error:", _error);
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 

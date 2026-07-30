@@ -6,6 +6,18 @@ import leaveRoutes from './routes/leaves';
 import adminRoutes from './routes/admin';
 import holidaysRoutes from './routes/holidays';
 import { initCronJobs } from './cron/leaveAccrual';
+import { logger } from './utils/logger';
+import { requestLogger } from './middleware/requestLogger';
+import { HTTP_STATUS } from './constants/httpCodes';
+
+// Catch unhandled process exceptions and rejections
+process.on('uncaughtException', (err: Error) => {
+    logger.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,13 +25,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Log every incoming request for debugging
-app.use((req, res, next) => {
-    console.log(`[API] ${req.method} ${req.url}`);
-    next();
-});
-
-import { HTTP_STATUS } from './constants/httpCodes';
+// Log every incoming HTTP request and response
+app.use(requestLogger);
 
 // Test API Route
 app.get(['/', '/api', '/api/'], (_req: Request, res: Response) => {
@@ -54,6 +61,6 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/holidays', holidaysRoutes);
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    logger.info(`Server is running on http://localhost:${PORT}`);
     initCronJobs();
 });
