@@ -140,7 +140,7 @@ export const updateEmployee = async (req: Request, res: Response): Promise<void>
         
         // Only allow admins to assign/unassign themselves
         if (toggle_manager !== undefined && (req as any).user?.role === 'admin') {
-            const adminId = (req as any).user.id;
+            const adminId = Number((req as any).user.id);
             updateData.managers = toggle_manager 
                 ? { connect: { id: adminId } } 
                 : { disconnect: { id: adminId } };
@@ -183,8 +183,11 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
       return;
     }
 
+    const numEmployeeId = Number(employeeId);
+    const numAdminId = Number(adminId);
+
     const employee = await prisma.profiles.findUnique({
-      where: { id: employeeId }
+      where: { id: numEmployeeId }
     });
 
     if (!employee || !employee.is_active || employee.is_deleted) {
@@ -195,19 +198,19 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
     const updatedEmployee = await prisma.$transaction(async (tx) => {
       await tx.compOffGrant.create({
         data: {
-          employeeId,
-          daysGranted,
+          employeeId: numEmployeeId,
+          daysGranted: Number(daysGranted),
           reason,
           workedDates,
-          grantedBy: adminId,
+          grantedBy: numAdminId,
           status: 'approved'
         }
       });
 
       return await tx.profiles.update({
-        where: { id: employeeId },
+        where: { id: numEmployeeId },
         data: {
-          available_leaves: { increment: daysGranted }
+          available_leaves: { increment: Number(daysGranted) }
         }
       });
     });
@@ -216,7 +219,7 @@ export const grantCompOff = async (req: any, res: Response): Promise<void> => {
       // autoUpgradeUnpaidLeaves removed
     }
 
-    const finalProfile = await prisma.profiles.findUnique({ where: { id: employeeId } });
+    const finalProfile = await prisma.profiles.findUnique({ where: { id: numEmployeeId } });
     if (!finalProfile) throw new Error("Profile not found after update");
 
     if (finalProfile.email) {
